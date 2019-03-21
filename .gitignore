@@ -1,3 +1,11 @@
 *~
 *.o
 tmp*
+*.bat
+z_new_o/
+z_new_w/
+z_osabin/
+z_tools/
+GPL.txt
+LGPL.txt
+license.txt
