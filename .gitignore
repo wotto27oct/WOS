@@ -9,3 +9,5 @@ z_tools/
 GPL.txt
 LGPL.txt
 license.txt
+*.lst
+*.bin
