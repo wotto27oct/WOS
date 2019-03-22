@@ -12,3 +12,8 @@ license.txt
 *.lst
 *.bin
 *.sys
+*.bim
+*.gas
+*.hrb
+*.map
+*.obj
