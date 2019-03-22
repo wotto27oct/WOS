@@ -42,12 +42,21 @@ entry:
 		MOV		DH,0			; ヘッド0
 		MOV		CL,2			; セクタ2
 
+		MOV		SI,0			; count failure time of reading disks 
+retry:
 		MOV		AH,0x02			; AH=0x02 : ディスク読み込み
 		MOV		AL,1			; 1セクタ
 		MOV		BX,0
 		MOV		DL,0x00			; Aドライブ
 		INT		0x13			; ディスクBIOS呼び出し
-		JC		error
+		JNC		fin				; if not any error, go to fin
+		ADD		SI,1			; S1++
+		CMP		SI,5			; compare SI and 5
+		JAE		error			; if SI>=5 then go to error
+		MOV		AH,0x00
+		MOV		DL,0x00
+		INT		0x13			; reset drive systems
+		JMP		retry
 
 ; 読み終わったけどとりあえずやることないので寝る
 
