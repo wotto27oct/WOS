@@ -78,6 +78,7 @@ next:
 
 ; after data importing, let's execute haribote.sys
 		
+		MOV		[0x0ff0],CH		; memo where IPL read discs until
 		JMP		0xc200
 
 error:
