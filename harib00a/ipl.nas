@@ -42,6 +42,7 @@ entry:
 		MOV		DH,0			; ヘッド0
 		MOV		CL,2			; セクタ2
 
+readloop:
 		MOV		SI,0			; count failure time of reading disks 
 retry:
 		MOV		AH,0x02			; AH=0x02 : ディスク読み込み
@@ -49,7 +50,7 @@ retry:
 		MOV		BX,0
 		MOV		DL,0x00			; Aドライブ
 		INT		0x13			; ディスクBIOS呼び出し
-		JNC		fin				; if not any error, go to fin
+		JNC		next				; if not any error, go to fin
 		ADD		SI,1			; S1++
 		CMP		SI,5			; compare SI and 5
 		JAE		error			; if SI>=5 then go to error
@@ -57,6 +58,14 @@ retry:
 		MOV		DL,0x00
 		INT		0x13			; reset drive systems
 		JMP		retry
+
+next:
+		MOV		AX,ES			; put address by 0x200
+		ADD 	AX,0x0020
+		MOV		ES,AX			; cannot "add ES,0x0020" so use AX
+		ADD		CL,1			; CL++
+		CMP		CL,18			; compare CL and 18
+		JBE		readloop		; if CL<=18 then go to readloop
 
 ; 読み終わったけどとりあえずやることないので寝る
 
