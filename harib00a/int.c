@@ -23,6 +23,7 @@ void init_pic(void)
 }
 
 struct FIFO8 keyfifo;
+struct FIFO8 mousefifo;
 
 // interrupt from PS/2 Keyboard
 void inthandler21(int *esp)
@@ -35,14 +36,15 @@ void inthandler21(int *esp)
 	return;
 }
 
+// interrupt from PS/2 mouse
 void inthandler2c(int *esp)
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	boxfill8(binfo->vram, binfo->scrnx, COL8_BLACK, 0, 0, 32 * 8 - 1, 15);
-	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_WHITE, "INT 2C (IRQ-1) : PS/2 mouse");
-	for (;;) {
-		io_hlt();
-	}
+	unsigned char data;
+	io_out8(PIC1_OCW2, 0x64);	// report PIC1 that IRQ-12 is successfully accepted
+	io_out8(PIC0_OCW2, 0x62);	// report PIC0 that IRQ-02 is successfully accepted
+	data = io_in8(PORT_KEYDAT);
+	fifo8_put(&mousefifo, data);
+	return;
 }
 
 void inthandler27(int *esp)

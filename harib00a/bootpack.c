@@ -1,6 +1,7 @@
 #include "bootpack.h"
 
 extern struct FIFO8 keyfifo;
+extern struct FIFO8 mousefifo;
 
 void HariMain(void)
 {
@@ -11,7 +12,9 @@ void HariMain(void)
 	io_sti();	// now we can interrupt CPU after initialization of IDT/PIC
 
 	char keybuf[32];
+	char mousebuf[128];
 	fifo8_init(&keyfifo, 32, keybuf);
+	fifo8_init(&mousefifo, 32, mousebuf);
 	
 	io_out8(PIC0_IMR, 0xf9); // allow PIC1 and keyboard
 	io_out8(PIC1_IMR, 0xef); // allo mouse
@@ -36,14 +39,22 @@ void HariMain(void)
 
 	for(;;) {
 		io_cli();
-		if (fifo8_status(&keyfifo) == 0){
+		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) == 0){
 			io_stihlt();
 		} else {
-			i = fifo8_get(&keyfifo);
-			io_sti();
-			sprintf(s, "%02X", i);
-			boxfill8(binfo->vram, binfo->scrnx, COL8_DARKSKY, 0, 16, 15, 31);
-			putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_WHITE, s);
+			if (fifo8_status(&keyfifo) != 0){
+				i = fifo8_get(&keyfifo);
+				io_sti();
+				sprintf(s, "%02X", i);
+				boxfill8(binfo->vram, binfo->scrnx, COL8_DARKSKY, 0, 16, 15, 31);
+				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_WHITE, s);
+			} else if (fifo8_status(&mousefifo) != 0) {
+				i = fifo8_get(&mousefifo);
+				io_sti();
+				sprintf(s, "%02X", i);
+				boxfill8(binfo->vram, binfo->scrnx, COL8_DARKSKY, 0, 16, 15, 31);
+				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_WHITE, s);
+			}
 		}
 	}
 }
