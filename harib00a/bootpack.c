@@ -1,5 +1,7 @@
 #include "bootpack.h"
 
+extern struct KEYBUF keybuf;
+
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
@@ -8,6 +10,9 @@ void HariMain(void)
 	init_pic();
 	io_sti();	// now we can interrupt CPU after initialization of IDT/PIC
 	
+	io_out8(PIC0_IMR, 0xf9); // allow PIC1 and keyboard
+	io_out8(PIC1_IMR, 0xef); // allo mouse
+
 	init_palette();
 	init_screen8(binfo->vram, binfo->scrnx, binfo->scrny);
 
@@ -20,11 +25,20 @@ void HariMain(void)
 	sprintf(s, "(%d, %d)", mx, my);
 	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_WHITE, s);
 
-	io_out8(PIC0_IMR, 0xf9); // allow PIC1 and keyboard
-	io_out8(PIC1_IMR, 0xef); // allo mouse
+	int i;
 
 	for(;;) {
-		io_hlt();
+		io_cli();
+		if (keybuf.flag == 0) {
+			io_stihlt();
+		} else {
+			i = keybuf.data;
+			keybuf.flag = 0;
+			io_sti();
+			sprintf(s, "%02X", i);
+			boxfill8(binfo->vram, binfo->scrnx, COL8_DARKSKY, 0, 16, 15, 31);
+			putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_WHITE, s);
+		}
 	}
 }
 
