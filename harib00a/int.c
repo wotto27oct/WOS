@@ -22,7 +22,7 @@ void init_pic(void)
 	return;
 }
 
-struct KEYBUF keybuf;
+struct FIFO8 keyfifo;
 
 // interrupt from PS/2 Keyboard
 void inthandler21(int *esp)
@@ -31,12 +31,7 @@ void inthandler21(int *esp)
 	io_out8(PIC0_OCW2, 0x61);	// report PIC that IRQ-01 is successfully accepted
 	data = io_in8(PORT_KEYDAT);
 
-	if (keybuf.len < 32) {
-		keybuf.data[keybuf.next_w] = data;
-		keybuf.len++;
-		keybuf.next_w++;
-		if (keybuf.next_w == 32) keybuf.next_w = 0;
-	}
+	fifo8_put(&keyfifo, data);
 	return;
 }
 
