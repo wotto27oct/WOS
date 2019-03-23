@@ -25,15 +25,17 @@ void HariMain(void)
 	sprintf(s, "(%d, %d)", mx, my);
 	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_WHITE, s);
 
-	int i;
+	int i, j;
 
 	for(;;) {
 		io_cli();
-		if (keybuf.flag == 0) {
+		if (keybuf.next == 0) {
 			io_stihlt();
 		} else {
-			i = keybuf.data;
-			keybuf.flag = 0;
+			i = keybuf.data[0];
+			keybuf.next--;
+			for (j = 0; j < keybuf.next; j++)
+				keybuf.data[j] = keybuf.data[j+1];
 			io_sti();
 			sprintf(s, "%02X", i);
 			boxfill8(binfo->vram, binfo->scrnx, COL8_DARKSKY, 0, 16, 15, 31);
