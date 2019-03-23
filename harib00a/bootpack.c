@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "bootpack.h"
 
 void HariMain(void)
