@@ -200,6 +200,10 @@ void sheet_free(struct SHEET *sht);
 void sheet_refreshmap(struct SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0);
 
 //timer.c
+struct TIMERCTL {
+	unsigned int count;
+};
+
 void init_pit(void);
 void inthandler20(int *esp);
 #endif BOOTPACK

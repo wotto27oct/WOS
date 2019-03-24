@@ -3,6 +3,8 @@
 extern struct FIFO8 keyfifo;
 extern struct FIFO8 mousefifo;
 
+extern struct TIMERCTL timerctl;
+
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
 
 void HariMain(void)
@@ -10,7 +12,6 @@ void HariMain(void)
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 	char s[40],  keybuf[32], mousebuf[128];
 	int mx, my, i;
-	unsigned int count = 0;
 	struct MOUSE_DEC mdec;
 	unsigned int memtotal;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -68,8 +69,7 @@ void HariMain(void)
 	sheet_refresh(sht_back, 0, 0, binfo->scrnx, 48);
 
 	for(;;) {
-		count++;
-		sprintf(s, "%010d", count);
+		sprintf(s, "%010d", timerctl.count);
 		boxfill8(buf_win, 160, COL8_VIVGRAY, 40, 28, 119, 43);
 		putfonts8_asc(buf_win, 160, 40, 28, COL8_BLACK, s);
 		sheet_refresh(sht_win, 40, 28, 120, 44);
