@@ -24,8 +24,10 @@ void HariMain(void)
 
 	fifo8_init(&keyfifo, 32, keybuf);
 	fifo8_init(&mousefifo, 32, mousebuf);
+
+	init_pit();
 	
-	io_out8(PIC0_IMR, 0xf9); // allow PIC1 and keyboard
+	io_out8(PIC0_IMR, 0xf8); // allow PIC1 and keyboard
 	io_out8(PIC1_IMR, 0xef); // allo mouse
 
 	init_keyboard();
