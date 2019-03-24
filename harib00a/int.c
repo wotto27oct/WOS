@@ -1,5 +1,8 @@
 #include "bootpack.h"
 
+struct FIFO8 keyfifo;
+struct FIFO8 mousefifo;
+
 // PIC initialization
 void init_pic(void)
 {
@@ -22,30 +25,6 @@ void init_pic(void)
 	return;
 }
 
-struct FIFO8 keyfifo;
-struct FIFO8 mousefifo;
-
-// interrupt from PS/2 Keyboard
-void inthandler21(int *esp)
-{
-	unsigned char data;
-	io_out8(PIC0_OCW2, 0x61);	// report PIC that IRQ-01 is successfully accepted
-	data = io_in8(PORT_KEYDAT);
-
-	fifo8_put(&keyfifo, data);
-	return;
-}
-
-// interrupt from PS/2 mouse
-void inthandler2c(int *esp)
-{
-	unsigned char data;
-	io_out8(PIC1_OCW2, 0x64);	// report PIC1 that IRQ-12 is successfully accepted
-	io_out8(PIC0_OCW2, 0x62);	// report PIC0 that IRQ-02 is successfully accepted
-	data = io_in8(PORT_KEYDAT);
-	fifo8_put(&mousefifo, data);
-	return;
-}
 
 void inthandler27(int *esp)
 {
