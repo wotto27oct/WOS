@@ -1,6 +1,7 @@
 #include "bootpack.h"
 
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title);
+void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 void HariMain(void)
 {
@@ -9,6 +10,7 @@ void HariMain(void)
 	char s[40];
 	int fifobuf[128];
 	int mx, my, i, count = 0;
+	int cursor_x, cursor_c;
 	struct MOUSE_DEC mdec;
 	unsigned int memtotal;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -66,6 +68,7 @@ void HariMain(void)
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
 	init_mouse_cursor8(buf_mouse, 99);
 	make_window8(buf_win, 160, 52, "window");
+	make_textbox8(sht_win, 8, 28, 144, 16, COL8_WHITE);
 	sheet_slide(sht_back, 0, 0);
 	mx = (binfo->scrnx - 16) / 2;
 	my = (binfo->scrny - 28 - 16) / 2;
@@ -79,6 +82,9 @@ void HariMain(void)
 	sprintf(s, "memory %dMB   free : %dKB",
 			memtotal / (1024 * 1024), memman_total(memman) / 1024);
 	putfonts8_asc_sht(sht_back, 0, 32, COL8_WHITE, COL8_DARKSKY, s, 40);
+
+	cursor_x = 8;
+	cursor_c = COL8_WHITE;
 
 	for(;;) {
 		//sprintf(s, "%010d", timerctl.count);
@@ -97,12 +103,20 @@ void HariMain(void)
 				sprintf(s, "%02X", i - 256);
 				putfonts8_asc_sht(sht_back, 0, 16, COL8_WHITE, COL8_DARKSKY, s, 2);
 				if (i < 256 + 0x54) {
-					if (keytable[i - 256] != 0) {
+					if (keytable[i - 256] != 0 && cursor_x < 144) {
 						s[0] = keytable[i - 256];
 						s[1] = 0;
-						putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, s, 1);
+						putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_BLACK, COL8_WHITE, s, 1);
+						cursor_x += 8;
 					}
 				}
+				if (i == 256 + 0x0e && cursor_x > 8) {
+					// backspace
+					putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_BLACK, COL8_WHITE, " ", 1);
+					cursor_x -= 8;
+				}
+				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 			} else if (512 <= i && i <= 767) {
 				if (mouse_decode(&mdec, i - 512) != 0) {
 					// print data
@@ -136,22 +150,27 @@ void HariMain(void)
 					sprintf(s, "(%3d, %3d)", mx, my);
 					putfonts8_asc_sht(sht_back, 0, 0, COL8_WHITE, COL8_DARKSKY, s, 10);
 					sheet_slide(sht_mouse, mx, my);
+					if ((mdec.btn & 0x01) != 0) {
+						// if left_button is pushed, mov sht_win
+						sheet_slide(sht_win, mx - 80, my - 8);
+					}
 				}
 			} else if (i == 10) {
 				putfonts8_asc_sht(sht_back, 0, 64, COL8_WHITE, COL8_DARKSKY, "10[sec]", 7);
 			} else if (i == 3) {
 				putfonts8_asc_sht(sht_back, 0, 80, COL8_WHITE, COL8_DARKSKY, "3[sec]", 6);
 				count = 0;
-			} else if (i == 1) {
-				timer_init(timer3, &fifo, 0);
-				boxfill8(buf_back, binfo->scrnx, COL8_WHITE, 8, 96, 15, 111);
+			} else if (i <= 1) {
+				if (i != 0) {
+					timer_init(timer3, &fifo, 0);
+					cursor_c = COL8_BLACK;
+				} else {
+					timer_init(timer3, &fifo, 1);
+					cursor_c = COL8_WHITE;
+				}
 				timer_settime(timer3, 50);
-				sheet_refresh(sht_back, 8, 96, 16, 112);
-			} else if (i == 0) {
-				timer_init(timer3, &fifo, 1);
-				boxfill8(buf_back, binfo->scrnx, COL8_DARKSKY, 8, 96, 15, 111);
-				timer_settime(timer3, 50);
-				sheet_refresh(sht_back, 8, 96, 16, 112);
+				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 			}
 		}
 	}
@@ -203,5 +222,19 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title)
 			buf[(5 + y) * xsize + (xsize - 21 + x)] = c;
 		}
 	}
+	return;
+}
+void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c)
+{
+	int x1 = x0 + sx, y1 = y0 + sy;
+	boxfill8(sht->buf, sht->bxsize, COL8_DARKGRAY, x0 - 2, y0 - 3, x1 + 1, y0 - 3);
+	boxfill8(sht->buf, sht->bxsize, COL8_DARKGRAY, x0 - 3, y0 - 3, x0 - 3, y1 + 1);
+	boxfill8(sht->buf, sht->bxsize, COL8_WHITE, x0 - 3, y1 + 2, x1 + 1, y1 + 2);
+	boxfill8(sht->buf, sht->bxsize, COL8_WHITE, x1 + 2, y0 - 3, x1 + 2, y1 + 2);
+	boxfill8(sht->buf, sht->bxsize, COL8_BLACK, x0 - 1, y0 - 2, x1 + 0, y0 - 2);
+	boxfill8(sht->buf, sht->bxsize, COL8_BLACK, x0 - 2, y0 - 2, x0 - 2, y1 + 0);
+	boxfill8(sht->buf, sht->bxsize, COL8_VIVGRAY, x0 - 2, y1 + 1, x1 + 0, y1 + 1);
+	boxfill8(sht->buf, sht->bxsize, COL8_VIVGRAY, x1 + 1, y0 - 2, x1 + 1, y1 + 1);
+	boxfill8(sht->buf, sht->bxsize, c,           x0 - 1, y0 - 1, x1 + 0, y1 + 0);
 	return;
 }
