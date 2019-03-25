@@ -43,34 +43,6 @@ int fifo8_put(struct FIFO8 *fifo, unsigned char data);
 int fifo8_get(struct FIFO8 *fifo);
 int fifo8_status(struct FIFO8 *fifo);
 
-// graphic.c
-void init_palette(void);
-void set_palette(int start, int end, unsigned char *rgb);
-void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
-void init_screen8(char *vram, int x, int y);
-void putfont8(char*, int, int, int, char, char*);
-void putfonts8_asc(char*, int, int, int, char, unsigned char*);
-void init_mouse_cursor8(char *mouse, char bc);
-void putblock8_8(char *vram, int vxsize, int pxsize,
-		int pysize, int px0, int py0, char *buf, int bxsize);
-
-#define COL8_BLACK		0
-#define COL8_VIVRED		1
-#define COL8_VIVGREEN		2
-#define COL8_VIVYELLOW		3
-#define COL8_VIVBLUE		4
-#define COL8_VIVPURPLE		5
-#define COL8_VIVSKY		6
-#define COL8_WHITE		7
-#define COL8_VIVGRAY		8
-#define COL8_DARKRED		9
-#define COL8_DARKGREEN		10
-#define COL8_DARKYELLOW		11
-#define COL8_DARKBLUE		12
-#define COL8_DARKPURPLE	13
-#define COL8_DARKSKY		14
-#define COL8_DARKGRAY		15
-
 // dsctbl.c
 struct SEGMENT_DESCRIPTOR {
 	short limit_low, base_low;
@@ -221,4 +193,34 @@ void timer_free(struct TIMER *timer);
 void timer_init(struct TIMER *timer, struct FIFO8 *fifo, unsigned char data);
 void timer_settime(struct TIMER *timer, unsigned int timeout);
 void inthandler20(int *esp);
+
+// graphic.c
+void init_palette(void);
+void set_palette(int start, int end, unsigned char *rgb);
+void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
+void init_screen8(char *vram, int x, int y);
+void putfont8(char*, int, int, int, char, char*);
+void putfonts8_asc(char*, int, int, int, char, unsigned char*);
+void putfonts8_asc_sht(struct SHEET *sht, int x, int y, int c, int b, char *s, int l);
+void init_mouse_cursor8(char *mouse, char bc);
+void putblock8_8(char *vram, int vxsize, int pxsize,
+		int pysize, int px0, int py0, char *buf, int bxsize);
+
+#define COL8_BLACK		0
+#define COL8_VIVRED		1
+#define COL8_VIVGREEN		2
+#define COL8_VIVYELLOW		3
+#define COL8_VIVBLUE		4
+#define COL8_VIVPURPLE		5
+#define COL8_VIVSKY		6
+#define COL8_WHITE		7
+#define COL8_VIVGRAY		8
+#define COL8_DARKRED		9
+#define COL8_DARKGREEN		10
+#define COL8_DARKYELLOW		11
+#define COL8_DARKBLUE		12
+#define COL8_DARKPURPLE	13
+#define COL8_DARKSKY		14
+#define COL8_DARKGRAY		15
+
 #endif BOOTPACK
