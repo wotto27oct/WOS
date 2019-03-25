@@ -88,7 +88,7 @@ void HariMain(void)
 			io_sti();
 			if (256 <= i && i <= 511){
 				// keyboard
-				sprintf(s, "%02X", i);
+				sprintf(s, "%02X", i - 256);
 				putfonts8_asc_sht(sht_back, 0, 16, COL8_WHITE, COL8_DARKSKY, s, 2);
 			} else if (512 <= i && i <= 767) {
 				if (mouse_decode(&mdec, i - 512) != 0) {
