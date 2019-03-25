@@ -229,4 +229,7 @@ void putblock8_8(char *vram, int vxsize, int pxsize,
 #define COL8_DARKSKY		14
 #define COL8_DARKGRAY		15
 
+// mtask.c
+extern struct TIMER *mt_timer;
+extern int mt_tr;
 #endif BOOTPACK
