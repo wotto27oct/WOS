@@ -10,24 +10,23 @@ struct TSS32 {
 	int ldtr, iomap;
 };
 
-void task_b_main(void)
+void task_b_main(struct SHEET *sht_back)
 {
 	struct FIFO32 fifo;
-	struct TIMER *timer_ts;
+	struct TIMER *timer_ts, *timer_put;
 	int i, fifobuf[128], count = 0;
-	char s[11];
-	struct SHEET *sht_back;
-	sht_back = (struct SHEET *) *((int *) 0x0fec);
+	char s[12];
 
 	fifo32_init(&fifo, 128, fifobuf);
 	timer_ts = timer_alloc();
-	timer_init(timer_ts, &fifo, 1);
+	timer_init(timer_ts, &fifo, 2);
 	timer_settime(timer_ts, 2);
+	timer_put = timer_alloc();
+	timer_init(timer_put, &fifo, 1);
+	timer_settime(timer_put, 1);
 
 	for (;;) {
 		count++;
-		sprintf(s, "%10d", count);
-		putfonts8_asc_sht(sht_back, 0, 144, COL8_WHITE, COL8_DARKSKY, s, 10);
 		io_cli();
 		if (fifo32_status(&fifo) == 0) {
 			io_sti();
@@ -35,6 +34,10 @@ void task_b_main(void)
 			i = fifo32_get(&fifo);
 			io_sti();
 			if (i == 1) {
+				sprintf(s, "%11d", count);
+				putfonts8_asc_sht(sht_back, 0, 144, COL8_WHITE, COL8_DARKSKY, s, 11);
+				timer_settime(timer_put, 1);
+			} else if (i == 2) {
 				farjmp(0, 3 * 8);
 				timer_settime(timer_ts, 2);
 			}
@@ -68,6 +71,9 @@ void HariMain(void)
 		'2', '3', '0', '.'
 	};
 
+	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
+	struct TSS32 tss_a, tss_b;
+
 	init_gdtidt();
 	init_pic();
 	io_sti();	// now we can interrupt CPU after initialization of IDT/PIC
@@ -89,53 +95,19 @@ void HariMain(void)
 	timer3 = timer_alloc();
 	timer_init(timer3, &fifo, 1);
 	timer_settime(timer3, 50);
+	timer_ts = timer_alloc();
+	timer_init(timer_ts, &fifo, 2);
+	timer_settime(timer_ts, 2);
 
 	memtotal = memtest(0x00400000, 0xbfffffff);
 	memman_init(memman);
 	memman_free(memman, 0x00001000, 0x0009e000);
 	memman_free(memman, 0x00400000, memtotal - 0x00400000);
 	
-	struct TSS32 tss_a, tss_b;
-	tss_a.ldtr = 0;
-	tss_a.iomap = 0x40000000;
-	tss_b.ldtr = 0;
-	tss_b.iomap = 0x40000000;
-
-
-	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *) ADR_GDT;
-
-	set_segmdesc(gdt + 3, 103, (int) &tss_a, AR_TSS32);
-	set_segmdesc(gdt + 4, 103, (int) &tss_b, AR_TSS32);
-
-	task_b_esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024;
-
-	load_tr(3 * 8);
-	task_b_esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024;
-	tss_b.eip = (int) &task_b_main;
-	tss_b.eflags = 0x00000202; /* IF = 1; */
-	tss_b.eax = 0;
-	tss_b.ecx = 0;
-	tss_b.edx = 0;
-	tss_b.ebx = 0;
-	tss_b.esp = task_b_esp;
-	tss_b.ebp = 0;
-	tss_b.esi = 0;
-	tss_b.edi = 0;
-	tss_b.es = 1 * 8;
-	tss_b.cs = 2 * 8;
-	tss_b.ss = 1 * 8;
-	tss_b.ds = 1 * 8;
-	tss_b.fs = 1 * 8;
-	tss_b.gs = 1 * 8;
-
-	timer_ts = timer_alloc();
-	timer_init(timer_ts, &fifo, 2);
-	timer_settime(timer_ts, 2);
 
 	init_palette();
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
 	sht_back = sheet_alloc(shtctl);
-	*((int *) 0x0fec) = (int) sht_back;
 	sht_mouse = sheet_alloc(shtctl);
 	sht_win = sheet_alloc(shtctl);
 	buf_back = (unsigned char *) memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
@@ -164,6 +136,32 @@ void HariMain(void)
 
 	cursor_x = 8;
 	cursor_c = COL8_WHITE;
+	
+	tss_a.ldtr = 0;
+	tss_a.iomap = 0x40000000;
+	tss_b.ldtr = 0;
+	tss_b.iomap = 0x40000000;
+	set_segmdesc(gdt + 3, 103, (int) &tss_a, AR_TSS32);
+	set_segmdesc(gdt + 4, 103, (int) &tss_b, AR_TSS32);
+	load_tr(3 * 8);
+	task_b_esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
+	tss_b.eip = (int) &task_b_main;
+	tss_b.eflags = 0x00000202; /* IF = 1; */
+	tss_b.eax = 0;
+	tss_b.ecx = 0;
+	tss_b.edx = 0;
+	tss_b.ebx = 0;
+	tss_b.esp = task_b_esp;
+	tss_b.ebp = 0;
+	tss_b.esi = 0;
+	tss_b.edi = 0;
+	tss_b.es = 1 * 8;
+	tss_b.cs = 2 * 8;
+	tss_b.ss = 1 * 8;
+	tss_b.ds = 1 * 8;
+	tss_b.fs = 1 * 8;
+	tss_b.gs = 1 * 8;
+	*((int *) (task_b_esp + 4)) = (int) sht_back;
 
 	for(;;) {
 		//sprintf(s, "%010d", timerctl.count);
