@@ -31,6 +31,7 @@ void store_cr0(int);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 void load_tr(int tr);
 void taskswitch4(void);
+void taskswitch3(void);
 
 // fifo.c
 struct FIFO32 {
