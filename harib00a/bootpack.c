@@ -11,7 +11,7 @@ void HariMain(void)
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
 	struct FIFO8 timerfifo;
 	char s[40],  keybuf[32], mousebuf[128], timerbuf[8];
-	int mx, my, i;
+	int mx, my, i, count = 0;
 	struct MOUSE_DEC mdec;
 	unsigned int memtotal;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
@@ -81,8 +81,9 @@ void HariMain(void)
 	sheet_refresh(sht_back, 0, 0, binfo->scrnx, 48);
 
 	for(;;) {
-		sprintf(s, "%010d", timerctl.count);
-		putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, s, 10);
+		count++;
+		//sprintf(s, "%010d", timerctl.count);
+		//putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, s, 10);
 
 		io_cli();
 		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(&timerfifo) == 0) {
@@ -134,8 +135,11 @@ void HariMain(void)
 				io_sti();
 				if (i == 10) {
 					putfonts8_asc_sht(sht_back, 0, 64, COL8_WHITE, COL8_DARKSKY, "10[sec]", 7);
+					sprintf(s, "%010d", count);
+					putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, s, 10);
 				} else if (i == 3) {
 					putfonts8_asc_sht(sht_back, 0, 80, COL8_WHITE, COL8_DARKSKY, "3[sec]", 6);
+					count = 0;
 				} else {
 					if (i != 0) {
 						timer_init(timer3, &timerfifo, 0);
