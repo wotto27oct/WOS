@@ -16,6 +16,14 @@ void HariMain(void)
 	struct SHEET *sht_back, *sht_mouse, *sht_win;
 	struct TIMER *timer, *timer2, *timer3;
 	unsigned char *buf_back, *buf_mouse, *buf_win;
+	static char keytable[0x54] = {
+		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0,   0,   'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0,   0,   ']', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.'
+	};
 
 	init_gdtidt();
 	init_pic();
@@ -88,8 +96,12 @@ void HariMain(void)
 				// keyboard
 				sprintf(s, "%02X", i - 256);
 				putfonts8_asc_sht(sht_back, 0, 16, COL8_WHITE, COL8_DARKSKY, s, 2);
-				if (i == 0x1e + 256) {
-					putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, "A", 1);
+				if (i < 256 + 0x54) {
+					if (keytable[i - 256] != 0) {
+						s[0] = keytable[i - 256];
+						s[1] = 0;
+						putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, s, 1);
+					}
 				}
 			} else if (512 <= i && i <= 767) {
 				if (mouse_decode(&mdec, i - 512) != 0) {
@@ -127,8 +139,6 @@ void HariMain(void)
 				}
 			} else if (i == 10) {
 				putfonts8_asc_sht(sht_back, 0, 64, COL8_WHITE, COL8_DARKSKY, "10[sec]", 7);
-				sprintf(s, "%010d", count);
-				putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, s, 10);
 			} else if (i == 3) {
 				putfonts8_asc_sht(sht_back, 0, 80, COL8_WHITE, COL8_DARKSKY, "3[sec]", 6);
 				count = 0;
