@@ -1,9 +1,12 @@
 #include "bootpack.h"
 
-extern struct FIFO8 mousefifo;
+struct FIFO32 *mousefifo;
+int mousedata0;
 
-void enable_mouse(struct MOUSE_DEC *mdec)
+void enable_mouse(struct FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec)
 {
+	mousefifo = fifo;
+	mousedata0 = data0;
 	/* マウス有効 */
 	wait_KBC_sendready();
 	io_out8(PORT_KEYCMD, KEYCMD_SENDTO_MOUSE);
@@ -56,10 +59,10 @@ int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat)
 // interrupt from PS/2 mouse
 void inthandler2c(int *esp)
 {
-	unsigned char data;
+	int data;
 	io_out8(PIC1_OCW2, 0x64);	// report PIC1 that IRQ-12 is successfully accepted
 	io_out8(PIC0_OCW2, 0x62);	// report PIC0 that IRQ-02 is successfully accepted
 	data = io_in8(PORT_KEYDAT);
-	fifo8_put(&mousefifo, data);
+	fifo32_put(mousefifo, data + mousedata0);
 	return;
 }

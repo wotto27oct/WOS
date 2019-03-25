@@ -1,8 +1,5 @@
 #include "bootpack.h"
 
-struct FIFO8 keyfifo;
-struct FIFO8 mousefifo;
-
 // PIC initialization
 void init_pic(void)
 {
