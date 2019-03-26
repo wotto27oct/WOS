@@ -11,7 +11,7 @@ void task_b_main(struct SHEET *sht_back)
 	int i, fifobuf[128], count = 0, count0 = 0;
 	char s[12];
 
-	fifo32_init(&fifo, 128, fifobuf);
+	fifo32_init(&fifo, 128, fifobuf, 0);
 	timer_put = timer_alloc();
 	timer_init(timer_put, &fifo, 1);
 	timer_settime(timer_put, 1);
@@ -66,13 +66,13 @@ void HariMain(void)
 	};
 
 
-	struct TASK *task_b;
+	struct TASK *task_a, *task_b;
 
 	init_gdtidt();
 	init_pic();
 	io_sti();	// now we can interrupt CPU after initialization of IDT/PIC
 	
-	fifo32_init(&fifo, 128, fifobuf);
+	fifo32_init(&fifo, 128, fifobuf, 0);
 	init_pit();
 	init_keyboard(&fifo, 256);
 	enable_mouse(&fifo, 512, &mdec);
@@ -128,7 +128,8 @@ void HariMain(void)
 	cursor_x = 8;
 	cursor_c = COL8_WHITE;
 	
-	task_init(memman);
+	task_a = task_init(memman);
+	fifo.task = task_a;
 	task_b = task_alloc();
 	task_b->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
 	task_b->tss.eip = (int) &task_b_main;
@@ -147,7 +148,8 @@ void HariMain(void)
 
 		io_cli();
 		if (fifo32_status(&fifo) == 0) {
-			io_stihlt();
+			task_sleep(task_a);
+			io_sti();
 		} else {
 			i = fifo32_get(&fifo);
 			//sprintf(s, "%010d", i);
