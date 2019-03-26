@@ -230,9 +230,28 @@ void putblock8_8(char *vram, int vxsize, int pxsize,
 #define COL8_DARKSKY		14
 #define COL8_DARKGRAY		15
 
+#define COL8_000000		0
+#define COL8_FF0000		1
+#define COL8_00FF00		2
+#define COL8_FFFF00		3
+#define COL8_0000FF		4
+#define COL8_FF00FF		5
+#define COL8_00FFFF		6
+#define COL8_FFFFFF		7
+#define COL8_C6C6C6		8
+#define COL8_840000		9
+#define COL8_008400		10
+#define COL8_848400		11
+#define COL8_000084		12
+#define COL8_840084		13
+#define COL8_008484		14
+#define COL8_848484		15
+
 // mtask.c
 #define MAX_TASKS		1000
 #define TASK_GDT0		3
+#define MAX_TASKS_LV	100
+#define MAX_TASKLEVELS	10
 
 struct TSS32 {
 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
@@ -243,14 +262,20 @@ struct TSS32 {
 
 struct TASK {
 	int sel, flags; 	// sel means GDT number
-	int priority;
+	int level, priority;
 	struct TSS32 tss;
 };
 
-struct TASKCTL {
+struct TASKLEVEL {
 	int running;
 	int now;
-	struct TASK *tasks[MAX_TASKS];
+	struct TASK *tasks[MAX_TASKS_LV];
+};
+
+struct TASKCTL {
+	int now_lv;
+	char lv_change;
+	struct TASKLEVEL level[MAX_TASKLEVELS];
 	struct TASK tasks0[MAX_TASKS];
 };
 extern struct TASKCTL *taskctl;
@@ -258,7 +283,11 @@ extern struct TIMER *task_timer;
 
 struct TASK *task_init(struct MEMMAN *memman);
 struct TASK *task_alloc(void);
-void task_run(struct TASK *task, int priority);
+void task_run(struct TASK *task, int level, int priority);
 void task_switch(void);
 void task_sleep(struct TASK *task);
+struct TASK *task_now(void);
+void task_add(struct TASK *task);
+void task_remove(struct TASK *task);
+void task_switchsub(void);
 #endif BOOTPACK
