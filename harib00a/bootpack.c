@@ -8,6 +8,13 @@ void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 int cons_newline(int cursor_y, struct SHEET *sheet);
 
+struct FILEINFO {
+	unsigned char name[8], ext[3], type;
+	char reserve[10];
+	unsigned short time, date, clustno;
+	unsigned int size;
+};
+
 void console_task(struct SHEET *sheet, unsigned int memtotal)
 {
 	struct TIMER *timer;
@@ -16,6 +23,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	int x, y;
 	char s[30], cmdline[30];
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
+	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKING + 0x002600);
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
 	timer = timer_alloc();
@@ -79,6 +87,24 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 						}
 						sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
 						cursor_y = 28;
+					} else if (strcmp(cmdline, "dir") == 0) {
+						// dir command
+						for (x = 0; x < 224; x++) {
+							if(finfo[x].name[0] == 0x00) break;
+							if (finfo[x].name[0] != 0xe5) {
+								if ((finfo[x].type & 0x18) == 0) {
+									sprintf(s, "filename.ext   %7d", finfo[x].size);
+									for (y = 0; y < 8; y++) {
+										s[y] = finfo[x].name[y];
+									}
+									s[9] = finfo[x].ext[0];
+									s[10] = finfo[x].ext[1];
+									s[11] = finfo[x].ext[2];
+									putfonts8_asc_sht(sheet, 8, cursor_y, COL8_WHITE, COL8_BLACK, s, 30);
+									cursor_y = cons_newline(cursor_y, sheet);
+								}
+							}
+						}
 					} else if (cmdline[0] != 0) {
 						// not command, but not empty
 						putfonts8_asc_sht(sheet, 8, cursor_y, COL8_WHITE, COL8_BLACK, "Bad Command.", 12);

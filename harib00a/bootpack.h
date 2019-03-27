@@ -11,6 +11,7 @@ struct BOOTINFO {
 	char *vram;
 };
 #define ADR_BOOTINFO	0x00000ff0
+#define ADR_DISKING		0x00100000
 
 // naskfunc.nas
 void io_hlt(void);
