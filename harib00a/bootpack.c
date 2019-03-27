@@ -1,5 +1,7 @@
 #include "bootpack.h"
 
+#define KEYCMD_LED		0xed
+
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 void make_textbox8(struct SHEET *sht, int x0, int y0, int sx, int sy, int c);
@@ -61,11 +63,11 @@ void console_task(struct SHEET *sheet)
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
-	struct FIFO32 fifo;
+	struct FIFO32 fifo, keycmd;
 	char s[40];
-	int fifobuf[128];
+	int fifobuf[128], keycmd_buf[32];
 	int mx, my, i, count = 0;
-	int key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7;
+	int key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	int cursor_x, cursor_c;
 	struct MOUSE_DEC mdec;
 	unsigned int memtotal;
@@ -103,6 +105,7 @@ void HariMain(void)
 	io_sti();	// now we can interrupt CPU after initialization of IDT/PIC
 	
 	fifo32_init(&fifo, 128, fifobuf, 0);
+	fifo32_init(&keycmd, 32, keycmd_buf, 0);
 	init_pit();
 	init_keyboard(&fifo, 256);
 	enable_mouse(&fifo, 512, &mdec);
@@ -181,10 +184,18 @@ void HariMain(void)
 			memtotal / (1024 * 1024), memman_total(memman) / 1024);
 	putfonts8_asc_sht(sht_back, 0, 32, COL8_WHITE, COL8_DARKSKY, s, 40);
 
+	fifo32_put(&keycmd, KEYCMD_LED);
+	fifo32_put(&keycmd, key_leds);
+
 	for(;;) {
 		//sprintf(s, "%010d", timerctl.count);
 		//putfonts8_asc_sht(sht_win, 40, 28, COL8_BLACK, COL8_VIVGRAY, s, 10);
-
+		
+		if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0) {
+			keycmd_wait = fifo32_get(&keycmd);
+			wait_KBC_sendready();
+			io_out8(PORT_KEYDAT, keycmd_wait);
+		}
 		io_cli();
 		if (fifo32_status(&fifo) == 0) {
 			task_sleep(task_a);
@@ -259,6 +270,28 @@ void HariMain(void)
 				}
 				if (i == 256 + 0xb6) { // right-shift off
 					key_shift &= ~2;
+				}
+				if (i == 256 + 0x3a) { // CapsLock
+					key_leds ^= 4;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
+				}
+				if (i == 256 + 0x45) { // Numlock
+					key_leds ^= 2;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
+				}
+				if (i == 256 + 0x46) { // ScroolLock
+					key_leds ^= 1;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
+				}
+				if (i == 256 + 0xfa) { // success
+					keycmd_wait = -1;
+				}
+				if (i == 256 + 0xfe) { // failure
+					wait_KBC_sendready();
+					io_out8(PORT_KEYDAT, keycmd_wait);
 				}
 				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
 				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
