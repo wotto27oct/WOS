@@ -2,6 +2,7 @@
 #define BOOTPACK
 
 #include <stdio.h>
+#include <string.h>
 
 // asmhead.nas
 struct BOOTINFO {
