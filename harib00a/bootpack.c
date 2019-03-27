@@ -65,7 +65,7 @@ void HariMain(void)
 	char s[40];
 	int fifobuf[128];
 	int mx, my, i, count = 0;
-	int key_to = 0, key_shift = 0;
+	int key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7;
 	int cursor_x, cursor_c;
 	struct MOUSE_DEC mdec;
 	unsigned int memtotal;
@@ -207,6 +207,12 @@ void HariMain(void)
 				} else {
 					s[0] = 0;
 				}
+				if ('A' <= s[0] && s[0] <= 'Z') {
+					if (((key_leds & 4) == 0 && key_shift == 0) || ((key_leds & 4) != 0 && key_shift != 0)) {
+						s[0] += 0x20;
+					}
+				}
+
 				if (s[0] != 0) {
 					if (key_to == 0) { // go to taskA
 						if (cursor_x < 128) {
