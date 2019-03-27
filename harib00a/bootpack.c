@@ -11,7 +11,7 @@ void console_task(struct SHEET *sheet)
 {
 	struct TIMER *timer;
 	struct TASK *task = task_now();
-	int i, fifobuf[128], cursor_x = 8, cursor_c = COL8_BLACK;
+	int i, fifobuf[128], cursor_x = 16, cursor_c = COL8_BLACK;
 	char s[2];
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
@@ -66,7 +66,7 @@ void HariMain(void)
 	struct FIFO32 fifo, keycmd;
 	char s[40];
 	int fifobuf[128], keycmd_buf[32];
-	int mx, my, i, count = 0;
+	int mx, my, i;
 	int key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	int cursor_x, cursor_c;
 	struct MOUSE_DEC mdec;
@@ -251,10 +251,13 @@ void HariMain(void)
 						key_to = 1;
 						make_wtitle8(buf_win, sht_win->bxsize, "task_a", 0);
 						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 1);
+						cursor_c = -1;
+						boxfill8(sht_win->buf, sht_win->bxsize, COL8_WHITE, cursor_x, 28, cursor_x + 7, 43);
 					} else {
 						key_to = 0;
 						make_wtitle8(buf_win, sht_win->bxsize, "task_a", 1);
 						make_wtitle8(buf_cons, sht_cons->bxsize, "console", 0);
+						cursor_c = COL8_BLACK;
 					}
 					sheet_refresh(sht_win, 0, 0, sht_win->bxsize, 21);
 					sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
@@ -293,7 +296,10 @@ void HariMain(void)
 					wait_KBC_sendready();
 					io_out8(PORT_KEYDAT, keycmd_wait);
 				}
-				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+
+				if (cursor_c >= 0) {
+					boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+				}
 				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 			} else if (512 <= i && i <= 767) {
 				if (mouse_decode(&mdec, i - 512) != 0) {
@@ -336,14 +342,16 @@ void HariMain(void)
 			} else if (i <= 1) {
 				if (i != 0) {
 					timer_init(timer, &fifo, 0);
-					cursor_c = COL8_BLACK;
+					if (cursor_c >= 0) cursor_c = COL8_BLACK;
 				} else {
 					timer_init(timer, &fifo, 1);
-					cursor_c = COL8_WHITE;
+					if (cursor_c >= 0) cursor_c = COL8_WHITE;
 				}
 				timer_settime(timer, 50);
-				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
-				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
+				if (cursor_c >= 0) {
+					boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+					sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
+				}
 			}
 		}
 	}
