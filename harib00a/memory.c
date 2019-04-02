@@ -80,9 +80,6 @@ int memman_free(struct MEMMAN *man, unsigned int addr, unsigned int size) {
 	for (i = 0; i < man->frees; i++) {
 		if (man->free[i].addr > addr) {
 			break;
-		} else if (i == man->frees - 1) {
-			i = man->frees;
-			break;
 		}
 	}
 

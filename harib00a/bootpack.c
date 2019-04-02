@@ -10,6 +10,9 @@ int cons_newline(int cursor_y, struct SHEET *sheet);
 
 void console_task(struct SHEET *sheet, unsigned int memtotal);
 
+void file_readfat(int *fat, unsigned char *img);
+void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
+
 struct FILEINFO {
 	unsigned char name[8], ext[3], type;
 	char reserve[10];
@@ -19,7 +22,7 @@ struct FILEINFO {
 
 void HariMain(void)
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
+	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	struct FIFO32 fifo, keycmd;
 	char s[40];
 	int fifobuf[128], keycmd_buf[32];
@@ -75,7 +78,7 @@ void HariMain(void)
 	memman_init(memman);
 	memman_free(memman, 0x00001000, 0x0009e000);
 	memman_free(memman, 0x00400000, memtotal - 0x00400000);
-	
+
 
 	init_palette();
 	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
@@ -136,11 +139,12 @@ void HariMain(void)
 	sheet_updown(sht_cons, 1);
 	sheet_updown(sht_win, 2);
 	sheet_updown(sht_mouse, 3);
-	sprintf(s, "(%3d, %3d)", mx, my);
+
+	/*sprintf(s, "(%3d, %3d)", mx, my);
 	putfonts8_asc_sht(sht_back, 0, 0, COL8_WHITE, COL8_DARKSKY, s, 10);
 	sprintf(s, "memory %dMB   free : %dKB",
 			memtotal / (1024 * 1024), memman_total(memman) / 1024);
-	putfonts8_asc_sht(sht_back, 0, 32, COL8_WHITE, COL8_DARKSKY, s, 40);
+	putfonts8_asc_sht(sht_back, 0, 32, COL8_WHITE, COL8_DARKSKY, s, 40);*/
 
 	fifo32_put(&keycmd, KEYCMD_LED);
 	fifo32_put(&keycmd, key_leds);
@@ -314,13 +318,10 @@ void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char ac
 	boxfill8(buf, xsize, COL8_DARKGRAY, xsize - 2, 1,         xsize - 2, ysize - 2);
 	boxfill8(buf, xsize, COL8_BLACK, xsize - 1, 0,         xsize - 1, ysize - 1);
 	boxfill8(buf, xsize, COL8_VIVGRAY, 2,         2,         xsize - 3, ysize - 3);
-	boxfill8(buf, xsize, COL8_DARKBLUE, 3,         3,         xsize - 4, 20       );
 	boxfill8(buf, xsize, COL8_DARKGRAY, 1,         ysize - 2, xsize - 2, ysize - 2);
 	boxfill8(buf, xsize, COL8_BLACK, 0,         ysize - 1, xsize - 1, ysize - 1);
 
 	make_wtitle8(buf, xsize, title, act);
-
-
 	return;
 }
 
@@ -393,12 +394,16 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 	int x, y;
 	char s[30], cmdline[30], *p;
 	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
-	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKING + 0x002600);
+	struct FILEINFO *finfo = (struct FILEINFO *) (ADR_DISKIMG + 0x002600);
+
+	int *fat = (int *) memman_alloc_4k(memman, 4 * 2880);
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
 	timer = timer_alloc();
 	timer_init(timer, &task->fifo, 1);
 	timer_settime(timer, 50);
+
+	file_readfat(fat, (unsigned char *) (ADR_DISKIMG + 0x000200));
 
 	putfonts8_asc_sht(sheet, 8, 28, COL8_WHITE, COL8_BLACK, ">", 1);
 
@@ -493,6 +498,7 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 								y++;
 							}
 						}
+						
 						// search file
 						for (x = 0; x < 224; ) {
 							if (finfo[x].name[0] == 0x00) {
@@ -509,14 +515,15 @@ void console_task(struct SHEET *sheet, unsigned int memtotal)
 type_next_file:
 							x++;
 						}
+						
 						if (x < 224 && finfo[x].name[0] != 0x00) {
 							// file found
-							y = finfo[x].size;
-							p = (char *) (finfo[x].clustno * 512 + 0x003e00 + ADR_DISKING);
+							p = (char *) memman_alloc_4k(memman, finfo[x].size);
+							file_loadfile(finfo[x].clustno, finfo[x].size, p, fat, (char *) (ADR_DISKIMG + 0x003e00));
 							cursor_x = 8;
-							for (x = 0; x < y; x++) {
+							for (y = 0; y < finfo[x].size; y++) {
 								// output
-								s[0] = p[x];
+								s[0] = p[y];
 								s[1] = 0;
 								if (s[0] == 0x09) {
 									// tab
@@ -547,12 +554,14 @@ type_next_file:
 									}
 								}
 							}
+							memman_free_4k(memman, (int) p, finfo[x].size);
 						} else {
 							// file not found
 							putfonts8_asc_sht(sheet, 8, cursor_y, COL8_WHITE, COL8_BLACK, "File not found.", 15);
 							cursor_y = cons_newline(cursor_y, sheet);
 						}
 						cursor_y = cons_newline(cursor_y, sheet);
+						
 
 					} else if (cmdline[0] != 0) {
 						// not command, but not empty
@@ -603,3 +612,31 @@ int cons_newline(int cursor_y, struct SHEET *sheet)
 	return cursor_y;
 }
 
+void file_readfat(int *fat, unsigned char *img) {
+	int i, j = 0;
+	for (i = 0; i < 2880; i += 2) {
+		fat[i + 0] = (img[j + 0]		| img[j + 1] << 8) & 0xfff;
+		fat[i + 1] = (img[j + 1] >> 4	| img[j + 2] << 4) & 0xfff;
+		j += 3;
+	}
+	return;
+}
+
+void file_loadfile(int clustno, int size, char *buf, int *fat, char *img) {
+	int i;
+	for (;;) {
+		if (size <= 512) {
+			for (i = 0; i < size; i++) {
+				buf[i] = img[clustno * 512 + i];
+			}
+			break;
+		}
+		for (i = 0; i < 512; i++) {
+			buf[i] = img[clustno * 512 + i];
+		}
+		size -= 512;
+		buf += 512;
+		clustno = fat[clustno];
+	}
+	return;
+}
