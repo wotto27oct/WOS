@@ -16,7 +16,9 @@
 		GLOBAL	_load_cr0, _store_cr0
 		GLOBAL	_memtest_sub
 		GLOBAL	_load_tr, _farjmp
+		GLOBAL	_asm_cons_putchar
 		EXTERN	_inthandler20, _inthandler21, _inthandler27, _inthandler2c
+		EXTERN	_cons_putchar
 
 [SECTION .text]
 
@@ -209,3 +211,13 @@ _load_tr:
 _farjmp:		; void farjmp(int eip, int cs);
 		JMP		FAR [ESP+4]
 		RET
+
+_asm_cons_putchar:
+		PUSH	1
+		AND		EAX,0xff
+		PUSH	EAX
+		PUSH	DWORD [0x0fec]
+		CALL	_cons_putchar
+		ADD		ESP,12
+		RETF
+
