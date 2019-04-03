@@ -1,12 +1,12 @@
 [BITS 32]
 	MOV		AL,'H'
-	CALL	2*8:0xc53
+	INT		0x40
 	MOV		AL,'E'
-	CALL	2*8:0xc53
+	INT		0x40
 	MOV		AL,'L'
-	CALL	2*8:0xc53
+	INT		0x40
 	MOV		AL,'L'
-	CALL	2*8:0xc53
+	INT		0x40
 	MOV		AL,'O'
-	CALL	2*8:0xc53
+	INT		0x40
 	RETF

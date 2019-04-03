@@ -33,6 +33,9 @@ void store_cr0(int);
 unsigned int memtest_sub(unsigned int start, unsigned int end);
 void load_tr(int tr);
 void farjmp(int eip, int cs);
+void asm_cons_putchar(void);
+void farcall(int eip, int cs);
+
 
 // fifo.c
 struct FIFO32 {
