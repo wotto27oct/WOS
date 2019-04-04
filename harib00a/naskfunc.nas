@@ -18,8 +18,10 @@
 		GLOBAL	_load_tr, _farjmp
 		GLOBAL	_asm_cons_putchar
 		GLOBAL	_farcall
+		GLOBAL	_asm_hrb_api
 		EXTERN	_inthandler20, _inthandler21, _inthandler27, _inthandler2c
 		EXTERN	_cons_putchar
+		EXTERN	_hrb_api
 
 [SECTION .text]
 
@@ -228,3 +230,12 @@ _asm_cons_putchar:
 _farcall:		; void farcall(int eip, int cs);
 		CALL	FAR [ESP+4]
 		RET
+	
+_asm_hrb_api:
+		STI
+		PUSHAD
+		PUSHAD
+		CALL 	_hrb_api
+		ADD		ESP,32
+		POPAD
+		IRETD
