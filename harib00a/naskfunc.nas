@@ -13,12 +13,14 @@
 		GLOBAL	_io_load_eflags, _io_store_eflags
 		GLOBAL	_load_gdtr, _load_idtr
 		GLOBAL  _asm_inthandler20, _asm_inthandler21, _asm_inthandler27, _asm_inthandler2c
+		GLOBAL	_asm_inthandler0d
 		GLOBAL	_load_cr0, _store_cr0
 		GLOBAL	_memtest_sub
 		GLOBAL	_load_tr, _farjmp
 		GLOBAL	_farcall
 		GLOBAL	_asm_hrb_api, _start_app
 		EXTERN	_inthandler20, _inthandler21, _inthandler27, _inthandler2c
+		EXTERN	_inthandler0d
 		EXTERN	_hrb_api
 
 [SECTION .text]
@@ -261,6 +263,69 @@ _asm_inthandler2c:
 		POP		DS
 		POP		ES
 		IRETD
+
+
+_asm_inthandler0d:
+		STI
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		AX,SS
+		CMP		AX,1*8
+		JNE		.from_app
+; IRQ while OS is active
+		MOV		EAX,ESP
+		PUSH	SS
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_inthandler0d
+		ADD		ESP,8
+		POPAD
+		POP		DS
+		POP		ES
+		ADD		ESP,4
+		IRETD
+.from_app:
+; IRQ while app is active
+		CLI
+		MOV		EAX,1*8
+		MOV		DS,AX
+		MOV		ECX,[0xfe4]
+		ADD		ECX,-8
+		MOV		[ECX+4],SS
+		MOV		[ECX],ESP
+		MOV		SS,AX
+		MOV		ES,AX
+		MOV		ESP,ECX
+		STI
+		CALL	_inthandler0d
+		CLI
+		CMP		EAX,0
+		JNE		.kill
+		POP		ECX
+		POP		EAX
+		MOV		SS,AX
+		MOV		ESP,ECX
+		POPAD
+		POP		DS
+		POP		ES
+		ADD		ESP,4
+		IRETD
+.kill
+; forced termination of app
+		MOV		EAX,1*8
+		MOV		ES,AX
+		MOV		SS,AX
+		MOV		DS,AX
+		MOV		FS,AX
+		MOV		GS,AX
+		MOV		ESP,[0xfe4]
+		STI
+		POPAD
+		RET
+		
 
 _load_cr0:		; int load_cr0(void);
 		MOV		EAX,CR0
